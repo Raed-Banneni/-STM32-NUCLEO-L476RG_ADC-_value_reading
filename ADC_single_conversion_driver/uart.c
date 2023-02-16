@@ -30,6 +30,10 @@ int __io_putchar(int ch)
 	uart2_write(ch);
 	return (ch);
 }
+void ledtoggle(void)
+{
+	GPIOA->ODR ^=LED_PIN;
+}
 void ledon(void)
 {
 

@@ -1,44 +1,28 @@
 #include "stm32l476xx.h"
 #include "uart.h"
-
+#include "adc.h"
 #include <stdio.h>
 #include <stdint.h>
 
+uint32_t sensor_value;
 
 
-
-char key;
 int main(void)
 {
 	led_init();
+	ledon();
 	uart2_rxtx_init();
-	/*if you want to use the receive mode */
+	pa1_adc1_init();
 
 	while(1)
 	{
-		ledon();
-		key= uart2_read();
-		if (key =='o')
+		start_conversion();
 
-			ledon();
-		else
-			ledoff();
+		ledtoggle();
 
-
-	//if you want to use the transfer mode
-	/*
-
-	 while(1)
-	{
-	//the printf uses the __io_putchar function declared in uart.c  to send a whole string
-		printf("hello from stm32 ............ \n\r");
-
-	or for single character transfer  test use this :
-		uart2_write('1');
-		for (int i=0;i < 100000;i++){} // delay
-	*/
+		sensor_value=adc_read();
+		printf("%u \r\n",(unsigned int)sensor_value);
 	}
-	return 0;
 }
 
 
