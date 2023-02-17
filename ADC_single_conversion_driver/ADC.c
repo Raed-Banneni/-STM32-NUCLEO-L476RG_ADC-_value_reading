@@ -12,6 +12,10 @@ void pa1_adc1_init(void)
 	/****************configure adc periph ******************/
 	// enable clock access to adc module
 	RCC->AHB2ENR |=(1U<<13);
+
+	RCC->CCIPR |= (3U << 28); // select system clock for adc
+
+	for (volatile int i=0;i<10000;i++){}
 	/*******configure adc parameters****************/
 	//conversion sequence start
 	ADC1->SQR1 |=(1U<<7);
@@ -30,10 +34,18 @@ void pa1_adc1_init(void)
 	// Set ADVREGEN bit to 1
 	ADC1->CR |= ADC_CR_ADVREGEN;
 
-	// Wait for voltage regulator startup time to pass
+	// Start calibration
+	ADC1->CR |= ADC_CR_ADCAL;
 
-	// Set ADEN bit to 1
+	// Wait for calibration to complete
+	while (ADC1->CR & ADC_CR_ADCAL) {}
+
 	ADC1->CR |= ADC_CR_ADEN;
+	while (!(ADC1->ISR & ADC_ISR_ADRDY)) {
+	  // Wait for ADC startup time to pass
+	}
+
+
 }
 
 void start_conversion(void)
