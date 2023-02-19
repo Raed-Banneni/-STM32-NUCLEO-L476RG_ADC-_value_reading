@@ -1,50 +1,69 @@
 #include "stm32l476xx.h"
-#define ADC3EN	 (1U<<13)
-#define GPIOFEN  (1U<<5)
-#define ADC3_CH6 (1U<<6)
-#define ADC3_SEQL1 0X00
-
-void pf3_adc3_init(void)
+#include "adc.h"
+#define ADC1_SEQL1 0X00
+void pa1_adc1_init(void)
 {
-	/********configure ad the adc gpio pin******************/
+	/**************configure adc gpio pin ******************/
+	//enable clock access to GPIOA
+	RCC->AHB2ENR |= (1U<<0);
+	//set the mode of pa1 to analog  mode
+	GPIOA->MODER |=(1U<<2);
+	GPIOA->MODER |=(1U<<3);
+	/****************configure adc periph ******************/
+	// enable clock access to adc module
+	RCC->AHB2ENR |=(1U<<13);
 
-	// enable clock access to GPIOF
-	RCC->AHB2ENR |= GPIOFEN;
-	// set the mode of pf3 to analog mode
-	GPIOF->MODER |=(1U<<6);
-	GPIOF->MODER |=(1U<<7);
+	RCC->CCIPR |= (3U << 28); // select system clock for adc
 
-	/*********************configure the adc peripheral************/
-	// enable clock access to adc module:
-	RCC->AHB2ENR |=ADC3EN;
-	/*********** configure adc parameters **************/
+	for (volatile int i=0;i<10000;i++){}
+	/*******configure adc parameters****************/
 	//conversion sequence start
-	ADC3->SQR2 |= ADC3_CH6;
+	ADC1->SQR1 |=(1U<<7);
+	ADC1->SQR1 |=(1U<<8);
 	//conversion sequence length
-	ADC3->SQR2	= ADC3_SEQL1;
-	//enable adc module
-	/*
-	 * due to low power mode provided by nucleo l476rg
-	 * The software is allowed to set ADEN only when all bits of ADC_CR registers are 0
-	 * (ADCAL=0, JADSTART=0, ADSTART=0, ADSTP=0, ADDIS=0 and ADEN=0) except for
-	 * bit ADVREGEN which must be 1
-	 */
-	ADC3->CR &= (1U<<28);
+	ADC1->SQR1 &= 0xFFFFFFF0UL;
+	//Enable adc module
 	// Check voltage regulator status
-	while ((ADC3->CR & ADC_CR_ADVREGEN) == 0) {
-	// Wait for voltage regulator startup time to pass
+	ADC1->CR &= 0x00000000;
+	ADC1->CR |= ADC_CR_ADVREGEN;
+
+	while (!(ADC1->CR & ADC_CR_ADVREGEN)) {
+		// Wait for voltage regulator startup time to pass
 	}
 
-	// Set ADVREGEN bit to 1
-	ADC3->CR |= ADC_CR_ADVREGEN;
+	//  make sure Set ADVREGEN bit is set to 1
+	ADC1->CR |= ADC_CR_ADVREGEN;
 
-	// Wait for voltage regulator startup time to pass
+   //ENABLE ADC MODULE
+	ADC1->CR |= ADC_CR_ADEN;
+	while (!(ADC1->ISR & ADC_ISR_ADRDY)) {
+	  // Wait for ADC startup time to pass
+	}
 
-	// Set ADEN bit to 1
-	ADC3->CR |= ADC_CR_ADEN;
+	ADC1->CFGR &=~ ADC_CFGR_DISCEN;
+	ADC1->CR &=~ADC_CR_ADSTART;
 
+	//enable continuous conversion mode
+	ADC1->CFGR |=ADC_CFGR_CONT;
+
+	while (!(ADC1->CFGR & ADC_CFGR_CONT)){}
 }
+
 void start_conversion(void)
 {
+
 	/*start adc conversion 	 */
+	ADC1->CR |=ADC_CR_ADSTART;
+
+
+}
+
+uint32_t adc_read(void)
+{
+
+
+	// wait for conversion to be complete
+	while (!(ADC1->ISR & ADC_ISR_EOC)){}
+	//read converted result from ADC1 data register
+	return (ADC1->DR);
 }

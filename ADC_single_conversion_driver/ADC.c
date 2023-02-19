@@ -41,6 +41,7 @@ void pa1_adc1_init(void)
 	while (ADC1->CR & ADC_CR_ADCAL) {}
 
 	ADC1->CR |= ADC_CR_ADEN;
+
 	while (!(ADC1->ISR & ADC_ISR_ADRDY)) {
 	  // Wait for ADC startup time to pass
 	}
